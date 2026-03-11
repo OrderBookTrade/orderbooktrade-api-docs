@@ -1,0 +1,415 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "High-performance matching engine API for order placement and market data.",
+        "title": "OrderbookTrade Matching Engine API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/candles": {
+            "get": {
+                "description": "Retrieve OHLCV candle data for charting",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market Data"
+                ],
+                "summary": "Get Candlestick Data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Trading pair symbol (e.g., BTC_USDC)",
+                        "name": "market",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alias for market",
+                        "name": "symbol",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of candles to return (default 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of candles",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/engine.Candle"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/book": {
+            "get": {
+                "description": "Retrieve the current state of the order book (bids and asks)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market Data"
+                ],
+                "summary": "Get Order Book",
+                "responses": {
+                    "200": {
+                        "description": "Current order book snapshot",
+                        "schema": {
+                            "$ref": "#/definitions/engine.OrderBookSnapshot"
+                        }
+                    }
+                }
+            }
+        },
+        "/close": {
+            "post": {
+                "description": "Stops the matching engine processing loop",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Stop Matching Engine",
+                "responses": {
+                    "200": {
+                        "description": "Engine stopped successfully",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check if the server is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Health Check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/open": {
+            "post": {
+                "description": "Starts the matching engine processing loop",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Start Matching Engine",
+                "responses": {
+                    "200": {
+                        "description": "Engine started successfully",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/order": {
+            "post": {
+                "description": "Create a new limit order or cancel an existing one",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Place or Cancel an Order",
+                "parameters": [
+                    {
+                        "description": "Order details",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.OrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operation successful",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Error"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input parameters",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/trades": {
+            "get": {
+                "description": "Retrieve a list of recent trades",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Market Data"
+                ],
+                "summary": "Get Recent Trades",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of trades to return (default 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by symbol",
+                        "name": "symbol",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of recent trades",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/engine.Trade"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "engine.Candle": {
+            "type": "object",
+            "properties": {
+                "close": {
+                    "type": "number"
+                },
+                "high": {
+                    "type": "number"
+                },
+                "low": {
+                    "type": "number"
+                },
+                "open": {
+                    "type": "number"
+                },
+                "startTime": {
+                    "description": "Unix timestamp (seconds), minute aligned",
+                    "type": "integer"
+                },
+                "volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "engine.Level": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "engine.OrderBookSnapshot": {
+            "type": "object",
+            "properties": {
+                "asks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/engine.Level"
+                    }
+                },
+                "bids": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/engine.Level"
+                    }
+                },
+                "last_price": {
+                    "type": "number"
+                },
+                "mid_price": {
+                    "type": "number"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "engine.Trade": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "maker_order_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "side": {
+                    "description": "Taker's side",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.OrderSide"
+                        }
+                    ]
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "taker_order_id": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
+                }
+            }
+        },
+        "enum.OrderAction": {
+            "type": "string",
+            "enum": [
+                "create",
+                "cancel"
+            ],
+            "x-enum-varnames": [
+                "OrderActionCreate",
+                "OrderActionCancel"
+            ]
+        },
+        "enum.OrderSide": {
+            "type": "string",
+            "enum": [
+                "buy",
+                "sell"
+            ],
+            "x-enum-varnames": [
+                "OrderSideBuy",
+                "OrderSideSell"
+            ]
+        },
+        "enum.OrderType": {
+            "type": "string",
+            "enum": [
+                "limit"
+            ],
+            "x-enum-varnames": [
+                "OrderTypeLimit"
+            ]
+        },
+        "errcode.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.OrderRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "amount",
+                "id",
+                "price",
+                "side",
+                "symbol",
+                "type",
+                "user_id"
+            ],
+            "properties": {
+                "action": {
+                    "enum": [
+                        "create",
+                        "cancel"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.OrderAction"
+                        }
+                    ]
+                },
+                "amount": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "side": {
+                    "enum": [
+                        "buy",
+                        "sell"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.OrderSide"
+                        }
+                    ]
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "limit"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/enum.OrderType"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
