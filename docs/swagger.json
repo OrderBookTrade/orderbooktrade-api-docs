@@ -1,415 +1,797 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "description": "High-performance matching engine API for order placement and market data.",
-        "title": "OrderbookTrade Matching Engine API",
-        "contact": {},
-        "version": "1.0.0"
-    },
-    "host": "localhost:8080",
-    "basePath": "/",
-    "paths": {
-        "/api/candles": {
-            "get": {
-                "description": "Retrieve OHLCV candle data for charting",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Market Data"
-                ],
-                "summary": "Get Candlestick Data",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Trading pair symbol (e.g., BTC_USDC)",
-                        "name": "market",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Alias for market",
-                        "name": "symbol",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Number of candles to return (default 100)",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of candles",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/engine.Candle"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/book": {
-            "get": {
-                "description": "Retrieve the current state of the order book (bids and asks)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Market Data"
-                ],
-                "summary": "Get Order Book",
-                "responses": {
-                    "200": {
-                        "description": "Current order book snapshot",
-                        "schema": {
-                            "$ref": "#/definitions/engine.OrderBookSnapshot"
-                        }
-                    }
-                }
-            }
-        },
-        "/close": {
-            "post": {
-                "description": "Stops the matching engine processing loop",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Stop Matching Engine",
-                "responses": {
-                    "200": {
-                        "description": "Engine stopped successfully",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/health": {
-            "get": {
-                "description": "Check if the server is running",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "System"
-                ],
-                "summary": "Health Check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/open": {
-            "post": {
-                "description": "Starts the matching engine processing loop",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Start Matching Engine",
-                "responses": {
-                    "200": {
-                        "description": "Engine started successfully",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/order": {
-            "post": {
-                "description": "Create a new limit order or cancel an existing one",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Orders"
-                ],
-                "summary": "Place or Cancel an Order",
-                "parameters": [
-                    {
-                        "description": "Order details",
-                        "name": "order",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.OrderRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Operation successful",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Error"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input parameters",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/trades": {
-            "get": {
-                "description": "Retrieve a list of recent trades",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Market Data"
-                ],
-                "summary": "Get Recent Trades",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Number of trades to return (default 50)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by symbol",
-                        "name": "symbol",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of recent trades",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/engine.Trade"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    },
-    "definitions": {
-        "engine.Candle": {
-            "type": "object",
-            "properties": {
-                "close": {
-                    "type": "number"
-                },
-                "high": {
-                    "type": "number"
-                },
-                "low": {
-                    "type": "number"
-                },
-                "open": {
-                    "type": "number"
-                },
-                "startTime": {
-                    "description": "Unix timestamp (seconds), minute aligned",
-                    "type": "integer"
-                },
-                "volume": {
-                    "type": "number"
-                }
-            }
-        },
-        "engine.Level": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "price": {
-                    "type": "number"
-                }
-            }
-        },
-        "engine.OrderBookSnapshot": {
-            "type": "object",
-            "properties": {
-                "asks": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/engine.Level"
-                    }
-                },
-                "bids": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/engine.Level"
-                    }
-                },
-                "last_price": {
-                    "type": "number"
-                },
-                "mid_price": {
-                    "type": "number"
-                },
-                "symbol": {
-                    "type": "string"
-                }
-            }
-        },
-        "engine.Trade": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "number"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "maker_order_id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "side": {
-                    "description": "Taker's side",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/enum.OrderSide"
-                        }
-                    ]
-                },
-                "symbol": {
-                    "type": "string"
-                },
-                "taker_order_id": {
-                    "type": "string"
-                },
-                "timestamp": {
-                    "type": "integer"
-                }
-            }
-        },
-        "enum.OrderAction": {
-            "type": "string",
-            "enum": [
-                "create",
-                "cancel"
-            ],
-            "x-enum-varnames": [
-                "OrderActionCreate",
-                "OrderActionCancel"
-            ]
-        },
-        "enum.OrderSide": {
-            "type": "string",
-            "enum": [
-                "buy",
-                "sell"
-            ],
-            "x-enum-varnames": [
-                "OrderSideBuy",
-                "OrderSideSell"
-            ]
-        },
-        "enum.OrderType": {
-            "type": "string",
-            "enum": [
-                "limit"
-            ],
-            "x-enum-varnames": [
-                "OrderTypeLimit"
-            ]
-        },
-        "errcode.Error": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "msg": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.OrderRequest": {
-            "type": "object",
-            "required": [
-                "action",
-                "amount",
-                "id",
-                "price",
-                "side",
-                "symbol",
-                "type",
-                "user_id"
-            ],
-            "properties": {
-                "action": {
-                    "enum": [
-                        "create",
-                        "cancel"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/enum.OrderAction"
-                        }
-                    ]
-                },
-                "amount": {
-                    "type": "number"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "number"
-                },
-                "side": {
-                    "enum": [
-                        "buy",
-                        "sell"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/enum.OrderSide"
-                        }
-                    ]
-                },
-                "symbol": {
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "limit"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/enum.OrderType"
-                        }
-                    ]
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        }
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OrderbookTrade API",
+    "description": "Prediction market infrastructure — matching engine, on-chain settlement, and portfolio management.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "OrderbookTrade",
+      "url": "https://orderbook.trade"
     }
+  },
+  "servers": [
+    { "url": "https://api.orderbook.trade", "description": "Production" },
+    { "url": "http://localhost:8080", "description": "Local" }
+  ],
+  "tags": [
+    { "name": "System", "description": "Health and status" },
+    { "name": "Auth", "description": "Wallet-based authentication (EIP-712 + JWT)" },
+    { "name": "Markets", "description": "Market listing and management" },
+    { "name": "Market Data", "description": "Orderbook, trades, candles" },
+    { "name": "Orders", "description": "Order placement and cancellation (EIP-712 signed)" },
+    { "name": "Portfolio", "description": "User balances, orders, positions, trades" },
+    { "name": "Deposits & Withdrawals", "description": "USDC deposit and withdrawal" },
+    { "name": "Admin", "description": "Admin operations (API Key required)" },
+    { "name": "WebSocket", "description": "Real-time market data streaming" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health Check",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "up" },
+                    "time": { "type": "integer", "example": 1710672000 },
+                    "version": { "type": "string", "example": "1.0.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/nonce": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Generate Login Nonce",
+        "description": "Returns a random nonce for the client to sign with EIP-712.",
+        "responses": {
+          "200": {
+            "description": "Nonce generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "nonce": { "type": "string", "example": "a1b2c3d4e5f6..." }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login with EIP-712 Signature",
+        "description": "Verify wallet signature and return JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "address": { "type": "string" },
+                        "expires": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/markets": {
+      "get": {
+        "tags": ["Markets"],
+        "summary": "List All Markets",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "resolved", "cancelled"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of markets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Market" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Markets"],
+        "summary": "Create Market",
+        "security": [{ "EIP712": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Market" } } }
+        },
+        "responses": {
+          "200": { "description": "Market created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } }
+        }
+      }
+    },
+    "/v1/markets/{market_id}": {
+      "get": {
+        "tags": ["Markets"],
+        "summary": "Get Market by ID",
+        "parameters": [{ "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Market detail",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "$ref": "#/components/schemas/Market" } } } } }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Markets"],
+        "summary": "Update Market",
+        "security": [{ "EIP712": [] }],
+        "parameters": [{ "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Market" } } } },
+        "responses": { "200": { "description": "Market updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } }
+      }
+    },
+    "/v1/markets/{market_id}/orderbook": {
+      "get": {
+        "tags": ["Market Data"],
+        "summary": "Get Orderbook Snapshot",
+        "parameters": [{ "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Orderbook snapshot",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderBookSnapshot" } } }
+          }
+        }
+      }
+    },
+    "/v1/markets/{market_id}/trades": {
+      "get": {
+        "tags": ["Market Data"],
+        "summary": "Get Recent Trades",
+        "parameters": [
+          { "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of trades",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Trade" } } } }
+          }
+        }
+      }
+    },
+    "/v1/markets/{market_id}/candles": {
+      "get": {
+        "tags": ["Market Data"],
+        "summary": "Get Candlestick Data",
+        "parameters": [
+          { "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OHLCV candles",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Candle" } } } }
+          }
+        }
+      }
+    },
+    "/v1/markets/{market_id}/onchain-status": {
+      "get": {
+        "tags": ["Market Data"],
+        "summary": "Get On-Chain Status",
+        "description": "Verify market's on-chain condition and token IDs.",
+        "parameters": [{ "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "On-chain consistency check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "market_id": { "type": "integer" },
+                        "condition_id": { "type": "string" },
+                        "condition_exists": { "type": "boolean" },
+                        "outcome_slot_count": { "type": "integer" },
+                        "is_consistent": { "type": "boolean" },
+                        "message": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orders": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Place Order",
+        "description": "Create a signed limit order. Request body must include EIP-712 signature.",
+        "security": [{ "EIP712": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrderRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Order accepted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+          "401": { "description": "Invalid signature" }
+        }
+      }
+    },
+    "/v1/orders/{order_id}": {
+      "delete": {
+        "tags": ["Orders"],
+        "summary": "Cancel Order",
+        "security": [{ "EIP712": [] }],
+        "parameters": [{ "name": "order_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["maker_address", "signature"],
+                "properties": {
+                  "maker_address": { "type": "string" },
+                  "market_id": { "type": "integer" },
+                  "side": { "type": "string", "enum": ["buy", "sell"] },
+                  "outcome": { "type": "string", "enum": ["YES", "NO"] },
+                  "signature": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order cancelled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } }
+        }
+      }
+    },
+    "/v1/me/balances": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get My Balances",
+        "security": [{ "BearerJWT": [] }],
+        "responses": {
+          "200": {
+            "description": "User balances",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Balance" } } } } } }
+          }
+        }
+      }
+    },
+    "/v1/me/orders": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get My Orders",
+        "security": [{ "BearerJWT": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["OPEN", "PARTIAL", "FILLED", "CANCELLED"] } },
+          { "name": "market_id", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "User orders",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } } } } } }
+          }
+        }
+      }
+    },
+    "/v1/me/positions": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get My Positions",
+        "security": [{ "BearerJWT": [] }],
+        "responses": {
+          "200": {
+            "description": "User positions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "market_id": { "type": "integer" },
+                          "market_name": { "type": "string" },
+                          "outcome": { "type": "string" },
+                          "total_size": { "type": "number" },
+                          "avg_price": { "type": "number" },
+                          "total_cost": { "type": "number" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/trades": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get My Trades",
+        "security": [{ "BearerJWT": [] }],
+        "parameters": [
+          { "name": "market_id", "in": "query", "schema": { "type": "integer" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": {
+          "200": { "description": "User trades", "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Trade" } } } } } } }
+        }
+      }
+    },
+    "/v1/me/deposit": {
+      "post": {
+        "tags": ["Deposits & Withdrawals"],
+        "summary": "Deposit USDC",
+        "description": "Verify on-chain USDC balance and allowance, then credit off-chain balance.",
+        "security": [{ "BearerJWT": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["amount"], "properties": { "amount": { "type": "number", "example": 100.0 } } } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_address": { "type": "string" },
+                        "amount": { "type": "number" },
+                        "ref_id": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/withdraw": {
+      "post": {
+        "tags": ["Deposits & Withdrawals"],
+        "summary": "Request Withdrawal",
+        "description": "Deduct off-chain balance and queue on-chain USDC transfer.",
+        "security": [{ "BearerJWT": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["amount"], "properties": { "amount": { "type": "number", "example": 50.0 } } } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Withdrawal queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "withdrawal_id": { "type": "string" },
+                        "amount": { "type": "number" },
+                        "status": { "type": "string", "example": "pending" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/deposits": {
+      "get": {
+        "tags": ["Deposits & Withdrawals"],
+        "summary": "Get Deposit History",
+        "security": [{ "BearerJWT": [] }],
+        "responses": {
+          "200": { "description": "Deposit records", "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Deposit" } } } } } } }
+        }
+      }
+    },
+    "/v1/me/withdrawals": {
+      "get": {
+        "tags": ["Deposits & Withdrawals"],
+        "summary": "Get Withdrawal History",
+        "security": [{ "BearerJWT": [] }],
+        "responses": {
+          "200": { "description": "Withdrawal records", "content": { "application/json": { "schema": { "type": "object", "properties": { "code": { "type": "integer" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Withdrawal" } } } } } } }
+        }
+      }
+    },
+    "/v1/admin/deposit": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Admin Deposit",
+        "security": [{ "AdminKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user_address", "amount"],
+                "properties": {
+                  "user_address": { "type": "string" },
+                  "amount": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Deposit credited", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponse" } } } } }
+      }
+    },
+    "/v1/admin/resolve": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Resolve Market",
+        "description": "Resolve a market, cancel open orders, and distribute payouts.",
+        "security": [{ "AdminKey": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["market_id", "winning_outcome"],
+                "properties": {
+                  "market_id": { "type": "integer" },
+                  "winning_outcome": { "type": "string", "enum": ["YES", "NO", "INVALID"] },
+                  "resolved_by": { "type": "string" },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Market resolved with payouts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "resolution": { "$ref": "#/components/schemas/Resolution" },
+                        "payout_count": { "type": "integer" },
+                        "payout_total": { "type": "number" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/resolutions/{market_id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get Resolution & Payouts",
+        "security": [{ "AdminKey": [] }],
+        "parameters": [{ "name": "market_id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": {
+            "description": "Resolution with payout details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "resolution": { "$ref": "#/components/schemas/Resolution" },
+                        "payouts": { "type": "array", "items": { "$ref": "#/components/schemas/Payout" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ws": {
+      "get": {
+        "tags": ["WebSocket"],
+        "summary": "WebSocket Connection",
+        "description": "Upgrade to WebSocket for real-time orderbook and trade updates.\n\n## Subscribe\n```json\n{\"type\": \"subscribe\", \"channel\": \"orderbook\", \"market_id\": 1}\n```\n\n## Server Events\n\n**Orderbook Update:**\n```json\n{\"type\": \"book_update\", \"market_id\": 1, \"data\": {\"yes_bids\": [...], \"yes_asks\": [...], \"no_bids\": [...], \"no_asks\": [...]}}\n```\n\n**Trade:**\n```json\n{\"type\": \"trade\", \"market_id\": 1, \"data\": {\"id\": \"...\", \"side\": \"buy\", \"price\": 0.55, \"size\": 100}}\n```",
+        "responses": {
+          "101": { "description": "WebSocket upgrade successful" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token from /auth/login"
+      },
+      "EIP712": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Signature",
+        "description": "EIP-712 typed data signature included in request body"
+      },
+      "AdminKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Admin-Key",
+        "description": "Admin API key"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "example": 0 },
+          "msg": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "integer", "example": 400 },
+          "msg": { "type": "string" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["account", "nonce", "timestamp", "signature"],
+        "properties": {
+          "account": { "type": "string", "example": "0x1234...abcd" },
+          "nonce": { "type": "string" },
+          "timestamp": { "type": "integer" },
+          "signature": { "type": "string" }
+        }
+      },
+      "Market": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string", "example": "Will BTC exceed $150K by Dec 2026?" },
+          "description": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "resolved", "cancelled"] },
+          "base_asset": { "type": "string" },
+          "quote_asset": { "type": "string", "example": "USDC" },
+          "min_price": { "type": "number" },
+          "max_price": { "type": "number" },
+          "min_size": { "type": "number" },
+          "max_size": { "type": "number" },
+          "tick_size": { "type": "number" },
+          "category": { "type": "string" },
+          "closes_at": { "type": "string", "format": "date-time" },
+          "condition_id": { "type": "string" },
+          "token_id_yes": { "type": "string" },
+          "token_id_no": { "type": "string" }
+        }
+      },
+      "OrderBookSnapshot": {
+        "type": "object",
+        "properties": {
+          "market_id": { "type": "integer" },
+          "yes_bids": { "type": "array", "items": { "$ref": "#/components/schemas/Level" } },
+          "yes_asks": { "type": "array", "items": { "$ref": "#/components/schemas/Level" } },
+          "no_bids": { "type": "array", "items": { "$ref": "#/components/schemas/Level" } },
+          "no_asks": { "type": "array", "items": { "$ref": "#/components/schemas/Level" } },
+          "last_price": { "type": "number" },
+          "mid_price": { "type": "number" }
+        }
+      },
+      "Level": {
+        "type": "object",
+        "properties": {
+          "price": { "type": "number", "example": 0.55 },
+          "size": { "type": "number", "example": 100.0 }
+        }
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "required": ["id", "maker_address", "market_id", "side", "type", "outcome", "price", "size", "action", "signature"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "maker_address": { "type": "string" },
+          "market_id": { "type": "integer" },
+          "side": { "type": "string", "enum": ["buy", "sell"] },
+          "type": { "type": "string", "enum": ["limit"] },
+          "outcome": { "type": "string", "enum": ["YES", "NO"] },
+          "time_in_force": { "type": "string", "enum": ["GTC", "IOC", "FOK"], "default": "GTC" },
+          "price": { "type": "number", "example": 0.55 },
+          "size": { "type": "number", "example": 100.0 },
+          "action": { "type": "string", "enum": ["create"] },
+          "salt": { "type": "string" },
+          "signature": { "type": "string" },
+          "expiration": { "type": "integer" },
+          "nonce": { "type": "integer" },
+          "token_id": { "type": "string" },
+          "maker_amount": { "type": "string" },
+          "taker_amount": { "type": "string" },
+          "signer": { "type": "string" },
+          "taker": { "type": "string", "default": "0x0000000000000000000000000000000000000000" },
+          "fee_rate_bps": { "type": "string", "default": "0" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "market_id": { "type": "integer" },
+          "maker_address": { "type": "string" },
+          "side": { "type": "string", "enum": ["buy", "sell"] },
+          "type": { "type": "string" },
+          "outcome": { "type": "string", "enum": ["YES", "NO"] },
+          "price": { "type": "number" },
+          "size": { "type": "number" },
+          "remaining_size": { "type": "number" },
+          "status": { "type": "string", "enum": ["OPEN", "PARTIAL", "FILLED", "CANCELLED"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Trade": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "market_id": { "type": "integer" },
+          "maker_order_id": { "type": "string" },
+          "taker_order_id": { "type": "string" },
+          "side": { "type": "string" },
+          "price": { "type": "number" },
+          "size": { "type": "number" },
+          "timestamp": { "type": "integer" }
+        }
+      },
+      "Candle": {
+        "type": "object",
+        "properties": {
+          "market_id": { "type": "integer" },
+          "timestamp": { "type": "integer" },
+          "open": { "type": "number" },
+          "high": { "type": "number" },
+          "low": { "type": "number" },
+          "close": { "type": "number" },
+          "volume": { "type": "number" }
+        }
+      },
+      "Balance": {
+        "type": "object",
+        "properties": {
+          "user_address": { "type": "string" },
+          "token_type": { "type": "string", "enum": ["USDC", "YES", "NO"] },
+          "market_id": { "type": "integer", "nullable": true },
+          "available": { "type": "number" },
+          "locked": { "type": "number" }
+        }
+      },
+      "Deposit": {
+        "type": "object",
+        "properties": {
+          "user_address": { "type": "string" },
+          "token": { "type": "string" },
+          "amount": { "type": "number" },
+          "ref_id": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Withdrawal": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "user_address": { "type": "string" },
+          "token": { "type": "string" },
+          "amount": { "type": "number" },
+          "status": { "type": "string", "enum": ["pending", "submitted", "confirmed", "failed"] },
+          "tx_hash": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Resolution": {
+        "type": "object",
+        "properties": {
+          "market_id": { "type": "integer" },
+          "winning_outcome": { "type": "string", "enum": ["YES", "NO", "INVALID"] },
+          "resolution_price": { "type": "number" },
+          "resolved_by": { "type": "string" },
+          "notes": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Payout": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "market_id": { "type": "integer" },
+          "user_address": { "type": "string" },
+          "outcome_held": { "type": "string" },
+          "token_amount": { "type": "number" },
+          "payout_amount": { "type": "number" },
+          "status": { "type": "string", "enum": ["pending", "paid"] }
+        }
+      }
+    }
+  }
 }
